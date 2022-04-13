@@ -12,18 +12,18 @@ hmi_ip = ''
 
 def changeData_reg(plc):
         plc = mt.TcpMaster(plc, 502)
-        i = randrange(1, 4)
+        i = randrange(100, 109)
         q = randrange(1, 500)
         plc.execute(slave=1, function_code=(md.WRITE_MULTIPLE_REGISTERS), starting_address=i, quantity_of_x=1, output_value=[q])
 
 def changeData0(plc):
         plc = mt.TcpMaster(plc, 502)
-        i = randrange(7, 18)
+        i = randrange(40, 50)
         plc.execute(slave=1, function_code=(md.WRITE_SINGLE_COIL), starting_address=i, quantity_of_x=1, output_value=0)
 
 def changeData1(plc):
         plc = mt.TcpMaster(plc, 502)
-        i = randrange(7, 18)
+        i = randrange(40, 50)
         plc.execute(slave=1, function_code=(md.WRITE_SINGLE_COIL), starting_address=i, quantity_of_x=1, output_value=1)
 
 def scan():

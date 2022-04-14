@@ -124,7 +124,7 @@ def handshake():
           TCP(sport=sport, dport=502, seq=seq_frame0, ack=ack_frame0, flags='S')
     thread1 = threading.Thread(target=cap)
     thread1.start()
-    time.sleep(1)
+    time.sleep(0.01)
     sendp(tcp_syn)
     thread1.join()
     global seq_frame2, ack_frame2

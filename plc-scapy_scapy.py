@@ -187,4 +187,8 @@ def main():
         arp_spoofing()
         data_injection()
 
-main()
+try:
+    main()
+except KeyboardInterrupt:
+    exit()
+

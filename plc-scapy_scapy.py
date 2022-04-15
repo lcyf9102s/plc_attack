@@ -190,5 +190,6 @@ def main():
 try:
     main()
 except IndexError:
+    print("Exiting....")
     exit()
 

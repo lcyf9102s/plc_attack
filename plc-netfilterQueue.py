@@ -90,15 +90,7 @@ def data_injection():
 		sleep(3)
 	queue.unbind()
 
-def change_mac():
-        process = os.popen('macchanger -r eth0')
-        out1 = process.read()
-        process.close()
-        print(out1)
-        sleep(1)
-
 def main():
-	change_mac()
 	get_ip()
 	arp_spoofing()
 	data_injection()

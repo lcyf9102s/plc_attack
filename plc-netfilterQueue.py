@@ -49,8 +49,6 @@ def process_pkt(packet):
     try:
         z = IP(packet.get_payload())
         func = z.funcCode
-        print(z[TCP].chksum)
-        print(z[IP].chksum)
         del z[TCP].chksum
         del z[IP].chksum
         del z[IP].len

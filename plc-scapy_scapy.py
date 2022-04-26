@@ -4,6 +4,7 @@ from random import *
 import os, nmap, threading
 from scapy.contrib import modbus
 from multiprocessing import Process
+from netfilterqueue import NetfilterQueue
 
 plc_ip = ''
 hmi_ip = ''

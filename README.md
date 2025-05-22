@@ -11,3 +11,4 @@ note.
 
 > TO DO (2023.1.5)
 > 用rust或c++改写，优化性能。
+> Update: 尝试使用Google Jules以C++完全改写，见branch: cpp-modbus-mitm. 未测试，效果未知。
